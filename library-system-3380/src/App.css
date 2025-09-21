@@ -1,0 +1,274 @@
+:root {
+  --dark-vanilla: #D7C1A8;
+  --beaver: #A28C75;
+  --quincy: #6C5141;
+  --falu-red: #7C2220;
+  --philippine-brown: #5F2119;
+  --darkwood: rgba(31, 23, 19, 1);
+}
+/* Reset and base styles */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'IMFellDWPica', Arial, sans-serif;
+  line-height: 1.6;
+  color: #333;
+
+}
+
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 20px;
+}
+
+/* Navigation */
+.navbar {
+  background-color: var(--darkwood);
+  color: var(--dark-vanilla);
+  padding: 1rem 0;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+}
+
+.nav-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;  /* Add this - controls space between logo and h2 */
+}
+
+.nav-logo {
+  display: flex;  /* Add this */
+  align-items: center;  /* Add this */
+}
+
+.nav-logo h2 {
+  color: var(--dark-vanilla);
+  font-size: 2.5rem;
+  padding-left: 1rem;
+  font-family: 'IMFellDWPica-Italic', Arial, sans-serif;
+  font-weight: 1;
+  margin: 0;  /* Add this - removes default margin */
+}
+
+#nav-lily {
+  max-width: 80px;
+  max-height: 80px;
+  margin: 0;
+  padding: 0;
+}
+
+.nav-menu {
+  display: flex;
+  list-style: none;
+  gap: 2rem;
+}
+
+.nav-link {
+  color: var(--beaver);
+  text-decoration: none;
+  font-weight: 500;
+  font-size: 1.2rem;
+  transition: color 0.3s ease;
+}
+
+.nav-link:hover {
+  color: var(--falu-red);
+}
+
+/* Hero Section */
+.hero {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: var(--beaver);
+  padding: 100px 0;
+  text-align: center;
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.hero-content h1 {
+  font-size: 3.5rem;
+  margin-bottom: 1rem;
+  text-shadow: 4px 4px 8px var(--darkwood);
+}
+
+.hero-content p {
+  font-size: 1.3rem;
+  margin-bottom: 2rem;
+  opacity: 0.9;
+}
+
+.hero-buttons {
+  display: flex;
+  gap: 1rem;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.btn-primary, .btn-secondary {
+  padding: 12px 30px;
+  font-size: 1.1rem;
+  font-weight: bold;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.btn-primary {
+  background-color: var(--falu-red);
+  color: var(--beaver);
+}
+
+.btn-primary:hover {
+  background-color: var(--quincy);
+  transform: translateY(-2px);
+}
+
+.btn-secondary {
+  background-color: transparent;
+  color: var(--falu-red);
+  border: 4px solid var(--falu-red);
+  font-weight: bold;
+}
+
+.btn-secondary:hover {
+  background-color: var(--quincy);
+  color: var(--beaver);
+  border: 4px solid var(--beaver);
+    font-weight: bold;
+
+  transform: translateY(-2px);
+}
+
+/* Services Section */
+.services {
+  padding: 80px 0;
+  background-color: var(--darkwood);
+}
+
+.services h2 {
+  text-align: center;
+  font-size: 2.5rem;
+  margin-bottom: 3rem;
+  color: var(--beaver);
+}
+
+.services-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 2rem;
+}
+
+.service-card {
+  background: #382d28;
+  border: 4px solid var(--beaver);
+  padding: 2rem;
+  border-radius: 10px;
+  text-align: center;
+  box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+.service-icon {
+  width: 60px;
+  height: 60px;
+  margin-bottom: 1rem;
+  object-fit: contain;
+}
+
+.service-card:hover .service-icon {
+  transform: scale(1.1);
+  transition: transform 0.3s ease;
+  filter: invert(12%) sepia(62%) saturate(3800%) hue-rotate(357deg) brightness(90%) contrast(101%);
+}
+
+.service-icon {
+  width: 60px;
+  height: 60px;
+  margin-bottom: 1rem;
+  filter: invert(85%) sepia(12%) saturate(575%) hue-rotate(339deg) brightness(97%) contrast(91%);
+
+  /* This filter converts black SVGs to your primary blue color */
+}
+.service-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 10px 25px var(--falu-red);
+  background-color: #281713;
+  border: 4px solid var(--falu-red);
+  font-weight: bold;
+
+}
+
+.service-card h3 {
+  font-size: 1.5rem;
+  margin-bottom: 1rem;
+  color: var(--dark-vanilla);
+}
+
+.service-card:hover h3 {
+  color: #7C2220;  /* Changes to dark red on hover */
+}
+
+.service-card p {
+  color: var(--beaver);
+  line-height: 1.6;
+}
+
+.service-card:hover p {
+  color: var(--philippine-brown);  /* Changes to dark red on hover */
+}
+
+/* Footer */
+.footer {
+  background: linear-gradient(180deg, #382d28 0%, var(--darkwood) 100%);
+  color: var(--dark-vanilla);
+  padding: 2rem 0;
+  text-align: center;
+  border-top: 10px groove var(--beaver);
+
+}
+
+.footer p {
+  margin-bottom: 0.5rem;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .nav-container {
+    flex-direction: column;
+    gap: 1rem;
+  }
+  
+  .nav-menu {
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 1rem;
+  }
+
+  .hero-content h1 {
+    font-size: 2.5rem;
+  }
+  
+  .hero-buttons {
+    flex-direction: column;
+    align-items: center;
+  }
+  
+  .btn-primary, .btn-secondary {
+    width: 250px;
+  }
+}

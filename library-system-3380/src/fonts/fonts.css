@@ -1,0 +1,13 @@
+@font-face {
+  font-family: 'IMFellDWPica'; /* Use the actual font name */
+  src: url('./IMFellDWPica-Regular.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'IMFellDWPica-Italic';
+  src: url('./IMFellDWPica-Italic.ttf') format('truetype');
+  font-weight: italic;
+  font-style: normal;
+}
