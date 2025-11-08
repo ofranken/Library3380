@@ -10,7 +10,7 @@ function Catalog() {
   const [selectedRatings, setSelectedRatings] = useState([]);
 
   // Filter options
-  const genres = ['Fiction', 'Non-Fiction', 'Mystery', 'Romance', 'Science Fiction', 'Fantasy', 'Biography', 'History'];
+  const genres = ['Fiction', 'Non-Fiction', 'Classics', 'Mystery', 'Horror', 'Romance', 'Science Fiction', 'Fantasy', 'Young Adult', 'Biography', 'History'];
   const formats = ['Hardcopy', 'E-Book'];
   const ratings = [5, 4.5, 4, 3.5, 3, 2.5, 2, 1.5, 1, 0.5];
 
