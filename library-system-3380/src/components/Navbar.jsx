@@ -20,10 +20,10 @@ function Navbar() {
             <a href="/book" className="nav-link">Required Readings</a>
           </li>
           <li className="nav-item">
-            <a href="#events" className="nav-link">Tutoring</a>
+            <a href="my-shelf" className="nav-link">My Shelf</a>
           </li>
-          <li className="nav-item">
-            <a href="#contact" className="nav-link">My Shelf</a>
+                    <li className="nav-item">
+            <a href="login" className="nav-link">Login</a>
           </li>
         </ul>
       </div>
