@@ -102,7 +102,7 @@ function Signup() {
         console.log('Signup successful:', response);
         
         // Redirect to home or dashboard
-        navigate('/myshelf');
+        navigate('/my-shelf');
       } catch (error) {
         setErrors({
           general: error.message || 'Signup failed. Please try again.'

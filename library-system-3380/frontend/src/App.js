@@ -6,9 +6,9 @@ import BookDetail from './pages/BookDetail';
 import MyShelf from './pages/MyShelf';
 import Login from './pages/Login';
 import Signup from './pages/Signup';
+import ProtectedRoute from './components/ProtectedRoute';
 import './App.css';
 import './fonts/fonts.css';
-
 
 function App() {
   return (
@@ -18,10 +18,20 @@ function App() {
           <Route path="/" element={<HomePage />} />
           <Route path="/catalog" element={<Catalog />} />
           <Route path="/book" element={<BookDetail />} />
-          <Route path="/my-shelf" element={<MyShelf />} />
+          
+          {/* Protected Route - requires login */}
+          <Route 
+            path="/my-shelf" 
+            element={
+              <ProtectedRoute>
+                <MyShelf />
+              </ProtectedRoute>
+            } 
+          />
+          
+          {/* Auth Routes */}
           <Route path="/login" element={<Login />} />
           <Route path="/signup" element={<Signup />} />
-          {/* Add more routes as needed */}
         </Routes>
       </div>
     </Router>
