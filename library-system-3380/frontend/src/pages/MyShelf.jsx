@@ -224,11 +224,11 @@ function MyShelf() {
   };
 
   const BookCard = ({ book, showRating = false }) => (
-    <div className="book-card">
+    <div className="dedicated-book-card">
       <div className="book-spine"></div>
       <img src={book.coverImage} alt={book.title} className="book-card-cover" />
       <div className="book-card-info">
-        <h4 className="book-card-title">{book.title}</h4>
+        <h4 className="book-card-titling">{book.title}</h4>
         <p className="book-card-author">{book.author}</p>
         {showRating && book.rating && (
           <div className="book-card-rating">
@@ -263,6 +263,11 @@ function MyShelf() {
       <div className="my-shelf-page">
         <div className="my-shelf-container">
           <h1 className="page-title">My Bookshelf</h1>
+          <div className="user-name-div">
+             <h2 className="user-name">🕮 --- ❀ --- 🕮</h2>
+             <h2 className="user-name">Your Name</h2>
+          </div>
+          
           
           {/* Class Management Section */}
           <div className="class-management-section">

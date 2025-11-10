@@ -18,12 +18,12 @@ function Services() {
       title: "Class Book Lists", 
       description: "Select your classes and automatically generate your book list"
     },
-    {
+    /*{
       icon: tutorIcon,
       alt: "Tutor icon",
       title: "Tutoring Sessions",
       description: "Schedule appointments with available writing tutors"
-    },
+    },*/
     {
       icon: reviewIcon,
       alt: "Star icon",

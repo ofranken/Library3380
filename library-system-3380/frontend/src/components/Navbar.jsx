@@ -31,9 +31,6 @@ function Navbar() {
             <Link to="/my-shelf" className="nav-link">Required Readings</Link>
           </li>
           <li className="nav-item">
-            <a href="#events" className="nav-link">Tutoring</a>
-          </li>
-          <li className="nav-item">
             <Link to="/my-shelf" className="nav-link">My Shelf</Link>
           </li>
           

@@ -17,7 +17,7 @@ function App() {
         <Routes>
           <Route path="/" element={<HomePage />} />
           <Route path="/catalog" element={<Catalog />} />
-          <Route path="/book" element={<BookDetail />} />
+          <Route path="/book/:isbn" element={<BookDetail />} />
           
           {/* Protected Route - requires login */}
           <Route 

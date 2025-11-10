@@ -221,6 +221,111 @@
   transform: translateY(0);
 }
 
+.tbr-button {
+  font-family: 'IMFellDWPica', Arial, sans-serif;
+  background-color: white;
+  color: var(--falu-red);
+  border-width: 6px;
+  border-color: var(--falu-red);
+  padding: 16px 40px;
+  font-size: 1.2rem;
+  font-weight: 600;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background-color 0.3s ease, transform 0.2s ease;
+  margin-top: 20px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.tbr-button:hover {
+  background-color: var(--philippine-brown);
+  color: white;
+  transform: translateY(-2px);
+}
+
+.tbr-button:active {
+  transform: translateY(0);
+}
+
+.mark-unread-button {
+  font-family: 'IMFellDWPica', Arial, sans-serif;
+  font-style: italic;
+  background-color: gainsboro;
+  color: black;
+  border-width: 6px;
+  border-color: gray;
+  padding: 16px 40px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background-color 0.3s ease, transform 0.2s ease;
+  margin-top: 20px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  width: 40%;
+  align-self: center;
+}
+
+.mark-unread-button:hover {
+  background-color: var(--darkwood);
+  color: white;
+  transform: translateY(-2px);
+}
+
+.mark-unread-button:active {
+  transform: translateY(0);
+}
+
+.user-rating-section {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.user-rating-section {
+    margin-top: 20%;
+    font-size: 1.3rem;
+    
+
+}
+
+.rating-stars-container {
+  align-self: center;
+  display: flex;
+  gap: 8px;
+  /* Important: reverse the visual order so DOM reverse + row-reverse = visual 1..5 */
+  flex-direction: row-reverse;
+}
+
+.rating-star {
+  font-size: 70px;
+  color: gainsboro; /* default (unfilled) */
+  transition: color 0.15s ease;
+  cursor: pointer;
+  user-select: none;
+}
+
+/* When a star is 'filled' (by userRating or hover), show filled color */
+.rating-star.filled {
+  color: black;
+}
+
+/* Hover: use sibling selector to fill the star and all previous visual stars.
+   Because DOM is reversed and container is row-reverse, "~" will target
+   the visually-left stars as intended. */
+.rating-star:hover,
+.rating-star:hover ~ .rating-star {
+  color: black;
+}
+
+/* Ensure when hovering the container the visual effect applies correctly */
+.rating-stars-container:focus-within .rating-star,
+.rating-stars-container:hover .rating-star {
+  /* no-op — keeps default behavior; explicit focus/hover doesn't override the above */
+}
+
 /* Responsive Design */
 @media (max-width: 968px) {
   .book-detail-container {

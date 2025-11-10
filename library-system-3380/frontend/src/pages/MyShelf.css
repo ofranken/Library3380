@@ -19,9 +19,19 @@
   letter-spacing: 2px;
 }
 
+.user-name-div {
+  margin-bottom: 3rem;
+  margin-top: -3rem;
+}
+
+.user-name {
+  display: flex;
+  justify-content: center;
+}
+
 /* Class Management Section */
 .class-management-section {
-  background-color: white;
+  background-color: #f8f3ed;
   border-radius: 12px;
   padding: 30px;
   margin-bottom: 40px;
@@ -55,10 +65,11 @@
 .class-search-input {
   width: 100%;
   padding: 14px 18px;
-  border: 2px solid var(--beaver);
+  border: 4px solid var(--beaver);
   border-radius: 8px;
   font-size: 1.05rem;
   color: var(--darkwood);
+  background-color: #f8f3ed;
   transition: border-color 0.3s ease;
   font-family: 'IMFellDWPica', Arial, sans-serif;
 }
@@ -157,7 +168,7 @@
 
 /* Bookshelf Styling */
 .bookshelf-container {
-  background-color: white;
+  background-color: #f8f3ed;
   border-radius: 12px;
   padding: 30px;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
@@ -248,7 +259,7 @@
 }
 
 /* Book Card Styling */
-.book-card {
+.dedicated-book-card {
   position: relative;
   display: flex;
   flex-direction: column;
@@ -259,7 +270,7 @@
   flex-shrink: 0;
 }
 
-.book-card:hover {
+.dedicated-book-card:hover {
   transform: translateY(-10px);
 }
 
@@ -299,7 +310,7 @@
   text-align: center;
 }
 
-.book-card-title {
+.book-card-titling {
   font-size: 0.9rem;
   color: var(--darkwood);
   font-weight: 600;
@@ -342,6 +353,24 @@
 .book-card-rating .star.empty {
   color: var(--beaver);
 }
+
+.books-row {
+  display: flex;
+  overflow-x: auto;
+  gap: 1rem;
+  padding-bottom: 1rem;
+  scrollbar-width: thin;
+}
+
+.books-row::-webkit-scrollbar {
+  height: 8px;
+}
+
+.books-row::-webkit-scrollbar-thumb {
+  background: #8b4513;
+  border-radius: 10px;
+}
+
 
 /* Responsive Design */
 @media (max-width: 1200px) {

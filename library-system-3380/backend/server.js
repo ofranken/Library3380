@@ -256,6 +256,415 @@ app.get('/api/health', (req, res) => {
   });
 });
 
+// ==================== BOOK CATALOG ROUTES ====================
+
+// Get all books for catalog with filters
+app.get('/api/books', async (req, res) => {
+  try {
+    const { genres, formats, ratings } = req.query;
+
+    let query = `
+      SELECT DISTINCT
+        b.ISBN,
+        b.Title,
+        b.Description,
+        GROUP_CONCAT(DISTINCT ba.Author SEPARATOR ', ') as Authors,
+        COALESCE(AVG(r.Out_of_five_stars), 3.0) as Average_Rating,
+        GROUP_CONCAT(DISTINCT bg.Genre SEPARATOR ', ') as Genres
+      FROM BOOK b
+      LEFT JOIN BOOK_AUTHOR ba ON b.ISBN = ba.ISBN
+      LEFT JOIN REVIEWS r ON b.ISBN = r.ISBN
+      LEFT JOIN BOOK_GENRE bg ON b.ISBN = bg.ISBN
+    `;
+
+    const conditions = [];
+    const params = [];
+
+    // Filter by genres if provided
+    if (genres) {
+      const genreList = Array.isArray(genres) ? genres : [genres];
+      conditions.push(`bg.Genre IN (${genreList.map(() => '?').join(',')})`);
+      params.push(...genreList);
+    }
+
+    // Filter by ratings if provided
+    if (ratings) {
+      const ratingList = Array.isArray(ratings) ? ratings : [ratings];
+      conditions.push(`COALESCE(AVG(r.Out_of_five_stars), 3.0) >= ?`);
+      params.push(Math.min(...ratingList.map(Number)));
+    }
+
+    if (conditions.length > 0) {
+      query += ' WHERE ' + conditions.join(' AND ');
+    }
+
+    query += ' GROUP BY b.ISBN, b.Title, b.Description ORDER BY b.Title';
+
+    const [books] = await promisePool.query(query, params);
+
+    res.status(200).json({
+      success: true,
+      books: books.map(book => ({
+        isbn: book.ISBN,
+        title: book.Title,
+        description: book.Description,
+        authors: book.Authors ? book.Authors.split(', ') : [],
+        rating: parseFloat(book.Average_Rating).toFixed(1),
+        genres: book.Genres ? book.Genres.split(', ') : [],
+        coverImage: `/images/${book.Title.replace(/\s+/g, '_').replace(/:/g, '')}.jpg`
+      }))
+    });
+
+  } catch (error) {
+    console.error('Error fetching books:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Error fetching books' 
+    });
+  }
+});
+
+// Get single book details by ISBN
+app.get('/api/books/:isbn', async (req, res) => {
+  const { isbn } = req.params;
+
+  try {
+    // Get book basic info
+    const [books] = await promisePool.query(
+      'SELECT ISBN, Title, Description FROM BOOK WHERE ISBN = ?',
+      [isbn]
+    );
+
+    if (books.length === 0) {
+      return res.status(404).json({ 
+        success: false, 
+        message: 'Book not found' 
+      });
+    }
+
+    const book = books[0];
+
+    // Get authors
+    const [authors] = await promisePool.query(
+      'SELECT Author FROM BOOK_AUTHOR WHERE ISBN = ?',
+      [isbn]
+    );
+
+    // Get genres
+    const [genres] = await promisePool.query(
+      'SELECT Genre FROM BOOK_GENRE WHERE ISBN = ?',
+      [isbn]
+    );
+
+    // Get average rating
+    const [ratingResult] = await promisePool.query(
+      'SELECT COALESCE(AVG(Out_of_five_stars), 3.0) as Average_Rating, COUNT(*) as Review_Count FROM REVIEWS WHERE ISBN = ?',
+      [isbn]
+    );
+
+    // Get availability by location and format
+    const [availability] = await promisePool.query(
+      `SELECT l.Name, f.Format_type, f.Quantity, l.Location_ID
+       FROM FORMAT f
+       JOIN LOCATION l ON f.Location_ID = l.Location_ID
+       WHERE f.ISBN = ?`,
+      [isbn]
+    );
+
+    res.status(200).json({
+      success: true,
+      book: {
+        isbn: book.ISBN,
+        title: book.Title,
+        description: book.Description,
+        authors: authors.map(a => a.Author),
+        genres: genres.map(g => g.Genre),
+        rating: parseFloat(ratingResult[0].Average_Rating).toFixed(1),
+        reviewCount: ratingResult[0].Review_Count,
+        coverImage: `/images/${book.Title.replace(/\s+/g, '_').replace(/:/g, '')}.jpg`,
+        availability: availability
+      }
+    });
+
+  } catch (error) {
+    console.error('Error fetching book details:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Error fetching book details' 
+    });
+  }
+});
+
+// Check if book is in user's TBR wishlist
+app.get('/api/tbr/check/:isbn', authenticateToken, async (req, res) => {
+  const { isbn } = req.params;
+  const studentId = req.user.studentId;
+
+  try {
+    const [result] = await promisePool.query(
+      'SELECT * FROM TBR_WISHLIST WHERE ISBN = ? AND Student_ID = ?',
+      [isbn, studentId]
+    );
+
+    res.status(200).json({
+      success: true,
+      inWishlist: result.length > 0
+    });
+
+  } catch (error) {
+    console.error('Error checking TBR:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Error checking wishlist' 
+    });
+  }
+});
+
+// Add book to TBR wishlist
+app.post('/api/tbr/add', authenticateToken, async (req, res) => {
+  const { isbn } = req.body;
+  const studentId = req.user.studentId;
+
+  try {
+    // Check if already in wishlist
+    const [existing] = await promisePool.query(
+      'SELECT * FROM TBR_WISHLIST WHERE ISBN = ? AND Student_ID = ?',
+      [isbn, studentId]
+    );
+
+    if (existing.length > 0) {
+      return res.status(409).json({ 
+        success: false, 
+        message: 'Book already in wishlist' 
+      });
+    }
+
+    await promisePool.query(
+      'INSERT INTO TBR_WISHLIST (ISBN, Student_ID) VALUES (?, ?)',
+      [isbn, studentId]
+    );
+
+    res.status(201).json({
+      success: true,
+      message: 'Book added to wishlist'
+    });
+
+  } catch (error) {
+    console.error('Error adding to TBR:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Error adding to wishlist' 
+    });
+  }
+});
+
+// Remove book from TBR wishlist
+app.delete('/api/tbr/remove/:isbn', authenticateToken, async (req, res) => {
+  const { isbn } = req.params;
+  const studentId = req.user.studentId;
+
+  try {
+    await promisePool.query(
+      'DELETE FROM TBR_WISHLIST WHERE ISBN = ? AND Student_ID = ?',
+      [isbn, studentId]
+    );
+
+    res.status(200).json({
+      success: true,
+      message: 'Book removed from wishlist'
+    });
+
+  } catch (error) {
+    console.error('Error removing from TBR:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Error removing from wishlist' 
+    });
+  }
+});
+
+// Get user's review for a book
+app.get('/api/reviews/:isbn', authenticateToken, async (req, res) => {
+  const { isbn } = req.params;
+  const studentId = req.user.studentId;
+
+  try {
+    const [reviews] = await promisePool.query(
+      'SELECT Out_of_five_stars FROM REVIEWS WHERE ISBN = ? AND Student_ID = ?',
+      [isbn, studentId]
+    );
+
+    res.status(200).json({
+      success: true,
+      review: reviews.length > 0 ? reviews[0] : null
+    });
+
+  } catch (error) {
+    console.error('Error fetching review:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Error fetching review' 
+    });
+  }
+});
+
+// Add or update review
+app.post('/api/reviews', authenticateToken, async (req, res) => {
+  const { isbn, rating } = req.body;
+  const studentId = req.user.studentId;
+
+  if (!isbn || !rating || rating < 0 || rating > 5) {
+    return res.status(400).json({ 
+      success: false, 
+      message: 'Invalid ISBN or rating' 
+    });
+  }
+
+  try {
+    // Check if review exists
+    const [existing] = await promisePool.query(
+      'SELECT * FROM REVIEWS WHERE ISBN = ? AND Student_ID = ?',
+      [isbn, studentId]
+    );
+
+    if (existing.length > 0) {
+      // Update existing review
+      await promisePool.query(
+        'UPDATE REVIEWS SET Out_of_five_stars = ? WHERE ISBN = ? AND Student_ID = ?',
+        [rating, isbn, studentId]
+      );
+    } else {
+      // Insert new review
+      await promisePool.query(
+        'INSERT INTO REVIEWS (Student_ID, ISBN, Out_of_five_stars) VALUES (?, ?, ?)',
+        [studentId, isbn, rating]
+      );
+    }
+
+    res.status(200).json({
+      success: true,
+      message: 'Review submitted successfully'
+    });
+
+  } catch (error) {
+    console.error('Error submitting review:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Error submitting review' 
+    });
+  }
+});
+
+// Delete review (Mark as unread)
+app.delete('/api/reviews/:isbn', authenticateToken, async (req, res) => {
+  const { isbn } = req.params;
+  const studentId = req.user.studentId;
+
+  try {
+    await promisePool.query(
+      'DELETE FROM REVIEWS WHERE ISBN = ? AND Student_ID = ?',
+      [isbn, studentId]
+    );
+
+    res.status(200).json({
+      success: true,
+      message: 'Review deleted successfully'
+    });
+
+  } catch (error) {
+    console.error('Error deleting review:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Error deleting review' 
+    });
+  }
+});
+
+// Get all classes
+app.get('/api/classes', authenticateToken, async (req, res) => {
+  try {
+    const [classes] = await promisePool.query(
+      'SELECT Class_ID, Department, Number, Class_title FROM CLASS ORDER BY Department, Number'
+    );
+    res.json({ success: true, classes });
+  } catch (error) {
+    console.error('Error fetching classes:', error);
+    res.status(500).json({ success: false, message: 'Error fetching classes' });
+  }
+});
+
+// Get user’s TBR books
+app.get('/api/user/tbr', authenticateToken, async (req, res) => {
+  try {
+    const [books] = await promisePool.query(`
+      SELECT b.ISBN, b.Title, GROUP_CONCAT(DISTINCT ba.Author SEPARATOR ', ') AS Authors
+      FROM TBR_WISHLIST t
+      JOIN BOOK b ON t.ISBN = b.ISBN
+      LEFT JOIN BOOK_AUTHOR ba ON b.ISBN = ba.ISBN
+      WHERE t.Student_ID = ?
+      GROUP BY b.ISBN, b.Title
+    `, [req.user.studentId]);
+    res.json({ success: true, books });
+  } catch (error) {
+    console.error('Error fetching TBR:', error);
+    res.status(500).json({ success: false, message: 'Error fetching TBR' });
+  }
+});
+
+// Get user’s reviewed books
+app.get('/api/user/reviews', authenticateToken, async (req, res) => {
+  try {
+    const [books] = await promisePool.query(`
+      SELECT b.ISBN, b.Title, GROUP_CONCAT(DISTINCT ba.Author SEPARATOR ', ') AS Authors, r.Out_of_five_stars
+      FROM REVIEWS r
+      JOIN BOOK b ON r.ISBN = b.ISBN
+      LEFT JOIN BOOK_AUTHOR ba ON b.ISBN = ba.ISBN
+      WHERE r.Student_ID = ?
+      GROUP BY b.ISBN, b.Title, r.Out_of_five_stars
+    `, [req.user.studentId]);
+    res.json({ success: true, books });
+  } catch (error) {
+    console.error('Error fetching reviews:', error);
+    res.status(500).json({ success: false, message: 'Error fetching reviews' });
+  }
+});
+
+// Get required readings for a class
+app.get('/api/classes/:classId/required', authenticateToken, async (req, res) => {
+  try {
+    const [books] = await promisePool.query(`
+      SELECT c.Department, c.Number, c.Class_title, b.ISBN, b.Title,
+             GROUP_CONCAT(DISTINCT ba.Author SEPARATOR ', ') AS Authors
+      FROM REQUIRES r
+      JOIN CLASS c ON r.Class_ID = c.Class_ID
+      JOIN BOOK b ON r.ISBN = b.ISBN
+      LEFT JOIN BOOK_AUTHOR ba ON b.ISBN = ba.ISBN
+      WHERE c.Class_ID = ?
+      GROUP BY c.Department, c.Number, c.Class_title, b.ISBN, b.Title
+    `, [req.params.classId]);
+    res.json({ success: true, books });
+  } catch (error) {
+    console.error('Error fetching required readings:', error);
+    res.status(500).json({ success: false, message: 'Error fetching required readings' });
+  }
+});
+
+// Get user’s name
+app.get('/api/user/name', authenticateToken, async (req, res) => {
+  try {
+    const [result] = await promisePool.query(
+      'SELECT Fname, Lname FROM STUDENT WHERE Student_ID = ?',
+      [req.user.studentId]
+    );
+    if (result.length === 0) return res.status(404).json({ success: false, message: 'User not found' });
+    res.json({ success: true, name: `${result[0].Fname} ${result[0].Lname}` });
+  } catch (error) {
+    console.error('Error fetching user name:', error);
+    res.status(500).json({ success: false, message: 'Error fetching name' });
+  }
+});
+
+
 // Start server
 app.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`);
