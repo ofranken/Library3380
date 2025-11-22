@@ -665,6 +665,168 @@ app.get('/api/user/name', authenticateToken, async (req, res) => {
 });
 
 
+// ==================== TAKES TABLE ROUTES (Class Enrollment) ====================
+
+// Get user's enrolled classes from TAKES table
+app.get('/api/user/enrolled-classes', authenticateToken, async (req, res) => {
+  try {
+    console.log('📚 Fetching enrolled classes for student:', req.user.studentId);
+    
+    const [classes] = await promisePool.query(`
+      SELECT c.Class_ID, c.Department, c.Number, c.Class_title
+      FROM TAKES t
+      JOIN CLASS c ON t.Class_ID = c.Class_ID
+      WHERE t.Student_ID = ?
+      ORDER BY c.Department, c.Number
+    `, [req.user.studentId]);
+    
+    console.log('📚 Found enrolled classes:', classes.length);
+    
+    res.json({ 
+      success: true, 
+      classes: classes || [] 
+    });
+  } catch (error) {
+    console.error('❌ Error fetching enrolled classes:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Error fetching enrolled classes' 
+    });
+  }
+});
+
+// Enroll in a class (add to TAKES table)
+app.post('/api/user/enroll-class', authenticateToken, async (req, res) => {
+  const { classId } = req.body;
+  const studentId = req.user.studentId;
+
+  console.log('➕ Enrolling student', studentId, 'in class', classId);
+
+  if (!classId) {
+    return res.status(400).json({ 
+      success: false, 
+      message: 'Class ID is required' 
+    });
+  }
+
+  try {
+    // Check if class exists
+    const [classExists] = await promisePool.query(
+      'SELECT Class_ID FROM CLASS WHERE Class_ID = ?',
+      [classId]
+    );
+
+    if (classExists.length === 0) {
+      console.log('❌ Class not found:', classId);
+      return res.status(404).json({ 
+        success: false, 
+        message: 'Class not found' 
+      });
+    }
+
+    // Check if already enrolled
+    const [existing] = await promisePool.query(
+      'SELECT * FROM TAKES WHERE Student_ID = ? AND Class_ID = ?',
+      [studentId, classId]
+    );
+
+    if (existing.length > 0) {
+      console.log('⚠️ Already enrolled in class:', classId);
+      return res.status(409).json({ 
+        success: false, 
+        message: 'Already enrolled in this class' 
+      });
+    }
+
+    // Enroll in class
+    await promisePool.query(
+      'INSERT INTO TAKES (Student_ID, Class_ID) VALUES (?, ?)',
+      [studentId, classId]
+    );
+
+    console.log('✅ Successfully enrolled in class:', classId);
+
+    res.status(201).json({
+      success: true,
+      message: 'Successfully enrolled in class'
+    });
+
+  } catch (error) {
+    console.error('❌ Error enrolling in class:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Error enrolling in class' 
+    });
+  }
+});
+
+// Unenroll from a class (remove from TAKES table)
+app.delete('/api/user/unenroll-class/:classId', authenticateToken, async (req, res) => {
+  const { classId } = req.params;
+  const studentId = req.user.studentId;
+
+  console.log('➖ Unenrolling student', studentId, 'from class', classId);
+
+  try {
+    // Delete from TAKES table
+    const [result] = await promisePool.query(
+      'DELETE FROM TAKES WHERE Student_ID = ? AND Class_ID = ?',
+      [studentId, classId]
+    );
+
+    if (result.affectedRows === 0) {
+      console.log('⚠️ Enrollment not found');
+      return res.status(404).json({ 
+        success: false, 
+        message: 'Enrollment not found' 
+      });
+    }
+
+    console.log('✅ Successfully unenrolled from class:', classId);
+
+    res.status(200).json({
+      success: true,
+      message: 'Successfully unenrolled from class'
+    });
+
+  } catch (error) {
+    console.error('❌ Error unenrolling from class:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Error unenrolling from class' 
+    });
+  }
+});
+
+// ==================== USER BORROWED BOOKS ROUTE ====================
+// Get all books currently borrowed by the logged-in user
+app.get('/api/user/borrowed-books', authenticateToken, async (req, res) => {
+  try {
+    const [books] = await promisePool.query(`
+      SELECT 
+        b.ISBN, 
+        b.Title, 
+        GROUP_CONCAT(DISTINCT ba.Author SEPARATOR ', ') AS Authors,
+        br.Borrow_date,
+        br.Due_date,
+        br.Returned
+      FROM BORROWS br
+      JOIN BOOK b ON br.ISBN = b.ISBN
+      LEFT JOIN BOOK_AUTHOR ba ON b.ISBN = ba.ISBN
+      WHERE br.Student_ID = ?
+      GROUP BY b.ISBN, b.Title, br.Borrow_date, br.Due_date, br.Returned
+      ORDER BY br.Borrow_date DESC
+    `, [req.user.studentId]);
+
+    res.json({ success: true, books });
+  } catch (error) {
+    console.error('Error fetching borrowed books:', error);
+    res.status(500).json({ success: false, message: 'Error fetching borrowed books' });
+  }
+});
+
+
+// ==================== END OF TAKES TABLE ROUTES ====================
 // Start server
 app.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`);

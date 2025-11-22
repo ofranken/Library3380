@@ -14,50 +14,42 @@ function MyShelf() {
   const [userName, setUserName] = useState('');
   const [readBooks, setReadBooks] = useState([]);
   const [tbrBooks, setTbrBooks] = useState([]);
+  const [borrowedBooks, setBorrowedBooks] = useState([]); // ✅ NEW STATE
   const [classReadings, setClassReadings] = useState({});
   const [loading, setLoading] = useState(true);
 
   const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
 
-  // Get auth token
-  const getAuthToken = () => {
-    return localStorage.getItem('token');
-  };
+  const getAuthToken = () => localStorage.getItem('token');
 
-  // Fetch user's name
+  // Fetch user name
   useEffect(() => {
     const fetchUserName = async () => {
       try {
         const token = getAuthToken();
         const response = await fetch(`${API_BASE_URL}/user/name`, {
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
+          headers: { 'Authorization': `Bearer ${token}` }
         });
         const data = await response.json();
-        if (data.success) {
-          setUserName(data.name);
-        }
-      } catch (error) {
-        console.error('Error fetching user name:', error);
+        if (data.success) setUserName(data.name);
+      } catch (err) {
+        console.error('Error fetching user name:', err);
       }
     };
     fetchUserName();
   }, []);
 
-  // Fetch all available classes
+  // Fetch available classes
   useEffect(() => {
     const fetchClasses = async () => {
       try {
         const token = getAuthToken();
-        const response = await fetch(`${API_BASE_URL}/classes`, {
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
+        const res = await fetch(`${API_BASE_URL}/classes`, {
+          headers: { 'Authorization': `Bearer ${token}` }
         });
-        const data = await response.json();
+        const data = await res.json();
         if (data.success) {
-          const formattedClasses = data.classes.map(cls => ({
+          const formatted = data.classes.map(cls => ({
             classId: cls.Class_ID,
             department: cls.Department,
             number: cls.Number,
@@ -65,214 +57,259 @@ function MyShelf() {
             code: `${cls.Department}${cls.Number}`,
             display: `${cls.Department}${cls.Number} - ${cls.Class_title}`
           }));
-          setAvailableClasses(formattedClasses);
+          setAvailableClasses(formatted);
         }
-      } catch (error) {
-        console.error('Error fetching classes:', error);
+      } catch (err) {
+        console.error('Error fetching classes:', err);
       }
     };
     fetchClasses();
   }, []);
 
-  // Fetch user's TBR books
+  // Fetch enrolled classes
   useEffect(() => {
-    const fetchTbrBooks = async () => {
+    const fetchEnrolledClasses = async () => {
       try {
         const token = getAuthToken();
-        const response = await fetch(`${API_BASE_URL}/user/tbr`, {
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
+        const res = await fetch(`${API_BASE_URL}/user/enrolled-classes`, {
+          headers: { 'Authorization': `Bearer ${token}` }
         });
-        const data = await response.json();
-        if (data.success) {
-          const formattedBooks = data.books.map(book => ({
-            id: book.ISBN,
-            isbn: book.ISBN,
-            title: book.Title,
-            author: book.Authors || 'Unknown Author',
-            coverImage: `/images/${book.Title.replace(/\s+/g, '_').replace(/:/g, '')}.jpg`
+        const data = await res.json();
+        if (data.success && data.classes) {
+          const formatted = data.classes.map(cls => ({
+            classId: cls.Class_ID,
+            department: cls.Department,
+            number: cls.Number,
+            title: cls.Class_title,
+            code: `${cls.Department}${cls.Number}`,
+            display: `${cls.Department}${cls.Number} - ${cls.Class_title}`
           }));
-          setTbrBooks(formattedBooks);
+          setSelectedClasses(formatted);
+          formatted.forEach(cls => fetchClassReadings(cls.classId));
         }
-      } catch (error) {
-        console.error('Error fetching TBR books:', error);
+      } catch (err) {
+        console.error('Error fetching enrolled classes:', err);
       }
     };
-    fetchTbrBooks();
+    fetchEnrolledClasses();
   }, []);
 
-  // Fetch user's reviewed books
+  // Fetch TBR
   useEffect(() => {
-    const fetchReviewedBooks = async () => {
+    const fetchTbr = async () => {
       try {
         const token = getAuthToken();
-        const response = await fetch(`${API_BASE_URL}/user/reviews`, {
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
+        const res = await fetch(`${API_BASE_URL}/user/tbr`, {
+          headers: { 'Authorization': `Bearer ${token}` }
         });
-        const data = await response.json();
+        const data = await res.json();
         if (data.success) {
-          const formattedBooks = data.books.map(book => ({
-            id: book.ISBN,
-            isbn: book.ISBN,
-            title: book.Title,
-            author: book.Authors || 'Unknown Author',
-            coverImage: `/images/${book.Title.replace(/\s+/g, '_').replace(/:/g, '')}.jpg`,
-            rating: book.Out_of_five_stars
+          const formatted = data.books.map(b => ({
+            id: b.ISBN,
+            isbn: b.ISBN,
+            title: b.Title,
+            author: b.Authors || 'Unknown Author',
+            coverImage: `/images/${b.Title.replace(/\s+/g, '_').replace(/:/g, '')}.jpg`
           }));
-          setReadBooks(formattedBooks);
+          setTbrBooks(formatted);
+        }
+      } catch (err) {
+        console.error('Error fetching TBR:', err);
+      }
+    };
+    fetchTbr();
+  }, []);
+
+  // ✅ Fetch Borrowed Books
+  useEffect(() => {
+    const fetchBorrowed = async () => {
+      try {
+        const token = getAuthToken();
+        const res = await fetch(`${API_BASE_URL}/user/borrows`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const data = await res.json();
+        if (data.success) {
+          const formatted = data.books.map(b => ({
+            id: b.ISBN,
+            isbn: b.ISBN,
+            title: b.Title,
+            author: b.Authors || 'Unknown Author',
+            coverImage: `/images/${b.Title.replace(/\s+/g, '_').replace(/:/g, '')}.jpg`
+          }));
+          setBorrowedBooks(formatted);
+        }
+      } catch (err) {
+        console.error('Error fetching borrowed books:', err);
+      }
+    };
+    fetchBorrowed();
+  }, []);
+
+  // Fetch reviewed books
+  useEffect(() => {
+    const fetchReviewed = async () => {
+      try {
+        const token = getAuthToken();
+        const res = await fetch(`${API_BASE_URL}/user/reviews`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const data = await res.json();
+        if (data.success) {
+          const formatted = data.books.map(b => ({
+            id: b.ISBN,
+            isbn: b.ISBN,
+            title: b.Title,
+            author: b.Authors || 'Unknown Author',
+            coverImage: `/images/${b.Title.replace(/\s+/g, '_').replace(/:/g, '')}.jpg`,
+            rating: b.Out_of_five_stars
+          }));
+          setReadBooks(formatted);
         }
         setLoading(false);
-      } catch (error) {
-        console.error('Error fetching reviewed books:', error);
+      } catch (err) {
+        console.error('Error fetching reviewed books:', err);
         setLoading(false);
       }
     };
-    fetchReviewedBooks();
+    fetchReviewed();
   }, []);
 
-  // Fetch required readings when a class is selected
-  const fetchClassReadings = async (classId, classInfo) => {
+  // Fetch readings for a class
+  const fetchClassReadings = async (classId) => {
     try {
       const token = getAuthToken();
-      const response = await fetch(`${API_BASE_URL}/classes/${classId}/required`, {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
+      const res = await fetch(`${API_BASE_URL}/classes/${classId}/required`, {
+        headers: { 'Authorization': `Bearer ${token}` }
       });
-      const data = await response.json();
+      const data = await res.json();
       if (data.success && data.books.length > 0) {
-        const formattedBooks = data.books.map(book => ({
-          id: book.ISBN,
-          isbn: book.ISBN,
-          title: book.Title,
-          author: book.Authors || 'Unknown Author',
-          coverImage: `/images/${book.Title.replace(/\s+/g, '_').replace(/:/g, '')}.jpg`
+        const formatted = data.books.map(b => ({
+          id: b.ISBN,
+          isbn: b.ISBN,
+          title: b.Title,
+          author: b.Authors || 'Unknown Author',
+          coverImage: `/images/${b.Title.replace(/\s+/g, '_').replace(/:/g, '')}.jpg`
         }));
-        
         setClassReadings(prev => ({
           ...prev,
           [classId]: {
-            books: formattedBooks,
+            books: formatted,
             shelfTitle: `${data.books[0].Department}${data.books[0].Number}: ${data.books[0].Class_title} - Required Readings`
           }
         }));
       }
-    } catch (error) {
-      console.error('Error fetching class readings:', error);
+    } catch (err) {
+      console.error('Error fetching class readings:', err);
     }
   };
 
-  // Filter classes based on search input
+  // Filtering/search logic
   useEffect(() => {
-    if (searchInput.trim() === '') {
+    if (!searchInput.trim()) {
       setFilteredClasses([]);
       setShowDropdown(false);
     } else {
       const filtered = availableClasses.filter(cls =>
         cls.display.toLowerCase().includes(searchInput.toLowerCase()) &&
-        !selectedClasses.some(selected => selected.classId === cls.classId)
+        !selectedClasses.some(sel => sel.classId === cls.classId)
       );
       setFilteredClasses(filtered);
       setShowDropdown(filtered.length > 0);
     }
   }, [searchInput, availableClasses, selectedClasses]);
 
-  const handleSearchChange = (e) => {
-    setSearchInput(e.target.value);
-  };
-
-  const handleKeyPress = (e) => {
+  const handleSearchChange = e => setSearchInput(e.target.value);
+  const handleKeyPress = e => {
     if (e.key === 'Enter' && searchInput.trim() !== '') {
-      const exactMatch = availableClasses.find(cls =>
+      const match = availableClasses.find(cls =>
         cls.display.toLowerCase() === searchInput.toLowerCase() ||
         cls.code.toLowerCase() === searchInput.toLowerCase()
       );
-      
-      if (exactMatch && !selectedClasses.some(selected => selected.classId === exactMatch.classId)) {
-        addClass(exactMatch);
+      if (match && !selectedClasses.some(sel => sel.classId === match.classId)) {
+        addClass(match);
       } else if (filteredClasses.length > 0) {
         addClass(filteredClasses[0]);
       }
     }
   };
 
-  const addClass = (classItem) => {
-    setSelectedClasses([...selectedClasses, classItem]);
-    setSearchInput('');
-    setShowDropdown(false);
-    fetchClassReadings(classItem.classId, classItem);
-  };
-
-  const removeClass = (classId) => {
-    setSelectedClasses(selectedClasses.filter(cls => cls.classId !== classId));
-    setClassReadings(prev => {
-      const newReadings = { ...prev };
-      delete newReadings[classId];
-      return newReadings;
-    });
-  };
-
-  const selectClassFromDropdown = (classItem) => {
-    addClass(classItem);
-  };
-
-  const handleBookClick = (isbn) => {
-    navigate(`/book/${isbn}`);
-  };
-
-  const renderStars = (rating) => {
-    const stars = [];
-    for (let i = 1; i <= 5; i++) {
-      stars.push(
-        <span key={i} className={`star ${i <= rating ? 'filled' : 'empty'}`}>
-          ★
-        </span>
-      );
+  const addClass = async (cls) => {
+    try {
+      const token = getAuthToken();
+      const res = await fetch(`${API_BASE_URL}/user/enroll-class`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ classId: cls.classId })
+      });
+      const data = await res.json();
+      if (data.success) {
+        setSelectedClasses([...selectedClasses, cls]);
+        setSearchInput('');
+        setShowDropdown(false);
+        fetchClassReadings(cls.classId);
+      }
+    } catch (err) {
+      console.error('Error adding class:', err);
     }
-    return stars;
   };
 
-  const BookCard = ({ book, showRating = false }) => (
-    <div 
-      className="dedicated-book-card" 
-      onClick={() => handleBookClick(book.isbn)}
-      style={{ cursor: 'pointer' }}
-    >
+  const removeClass = async (classId) => {
+    try {
+      const token = getAuthToken();
+      const res = await fetch(`${API_BASE_URL}/user/unenroll-class/${classId}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const data = await res.json();
+      if (data.success) {
+        setSelectedClasses(selectedClasses.filter(c => c.classId !== classId));
+        setClassReadings(prev => {
+          const copy = { ...prev };
+          delete copy[classId];
+          return copy;
+        });
+      }
+    } catch (err) {
+      console.error('Error removing class:', err);
+    }
+  };
+
+  const handleBookClick = isbn => navigate(`/book/${isbn}`);
+
+  const renderStars = rating =>
+    Array.from({ length: 5 }, (_, i) => (
+      <span key={i} className={`star ${i + 1 <= rating ? 'filled' : 'empty'}`}>★</span>
+    ));
+
+  const BookCard = ({ book, showRating }) => (
+    <div className="dedicated-book-card" onClick={() => handleBookClick(book.isbn)} style={{ cursor: 'pointer' }}>
       <div className="book-spine"></div>
-      <img 
-        src={book.coverImage} 
-        alt={book.title} 
+      <img
+        src={book.coverImage}
+        alt={book.title}
         className="book-card-cover"
-        onError={(e) => {
-          e.target.src = 'https://via.placeholder.com/120x180/8B4513/FFFFFF?text=No+Cover';
-        }}
+        onError={e => { e.target.src = 'https://via.placeholder.com/120x180/8B4513/FFFFFF?text=No+Cover'; }}
       />
       <div className="book-card-info">
         <h4 className="book-card-titling">{book.title}</h4>
         <p className="book-card-author">{book.author}</p>
-        {showRating && book.rating && (
-          <div className="book-card-rating">
-            {renderStars(book.rating)}
-          </div>
-        )}
+        {showRating && book.rating && <div className="book-card-rating">{renderStars(book.rating)}</div>}
       </div>
     </div>
   );
 
-  const Bookshelf = ({ title, books, showRating = false }) => (
+  const Bookshelf = ({ title, books, showRating }) => (
     <div className="bookshelf-container">
       <h2 className="shelf-title">{title}</h2>
       <div className="bookshelf">
         <div className="shelf-top"></div>
         <div className="books-row">
-          {books.length > 0 ? (
-            books.map(book => <BookCard key={book.id} book={book} showRating={showRating} />)
-          ) : (
-            <div className="empty-shelf-message">No books on this shelf yet</div>
-          )}
+          {books.length ? books.map(b => <BookCard key={b.id} book={b} showRating={showRating} />)
+            : <div className="empty-shelf-message">No books on this shelf yet</div>}
         </div>
         <div className="shelf-bottom"></div>
       </div>
@@ -296,22 +333,19 @@ function MyShelf() {
   return (
     <div>
       <Navbar />
-      
       <div className="my-shelf-page">
         <div className="my-shelf-container">
           <h1 className="page-title">My Bookshelf</h1>
           <div className="user-name-div">
-             <h2 className="user-name">🕮 --- ❀ --- 🕮</h2>
-             <h2 className="user-name">{userName || 'Loading...'}</h2>
+            <h2 className="user-name">🕮 --- ❀ --- 🕮</h2>
+            <h2 className="user-name">{userName || 'Loading...'}</h2>
           </div>
-          
-          {/* Class Management Section */}
+
+          {/* ✅ My Classes at Top */}
           <div className="class-management-section">
             <h2 className="section-title">My Classes</h2>
-            <p className="section-description">
-              Add classes to see their required readings on your shelf
-            </p>
-            
+            <p className="section-description">Add classes to see their required readings on your shelf</p>
+
             <div className="class-search-container">
               <div className="search-input-wrapper">
                 <input
@@ -323,14 +357,13 @@ function MyShelf() {
                   onKeyPress={handleKeyPress}
                   onFocus={() => searchInput && setShowDropdown(true)}
                 />
-                
                 {showDropdown && (
                   <div className="class-dropdown">
                     {filteredClasses.map(cls => (
                       <div
                         key={cls.classId}
                         className="class-dropdown-item"
-                        onClick={() => selectClassFromDropdown(cls)}
+                        onClick={() => addClass(cls)}
                       >
                         {cls.display}
                       </div>
@@ -338,30 +371,22 @@ function MyShelf() {
                   </div>
                 )}
               </div>
-              
               <div className="selected-classes">
                 {selectedClasses.map(cls => (
                   <div key={cls.classId} className="class-tag">
                     <span className="class-tag-text">{cls.code}</span>
-                    <button
-                      className="class-tag-remove"
-                      onClick={() => removeClass(cls.classId)}
-                      aria-label={`Remove ${cls.code}`}
-                    >
-                      ×
-                    </button>
+                    <button className="class-tag-remove" onClick={() => removeClass(cls.classId)}>×</button>
                   </div>
                 ))}
               </div>
             </div>
           </div>
 
-          {/* Personal Shelves */}
+          {/* ✅ Shelves Below */}
           <div className="shelves-section">
+            <Bookshelf title="Borrowed Books" books={borrowedBooks} />
             <Bookshelf title="Personal TBR" books={tbrBooks} />
-            <Bookshelf title="Read Books" books={readBooks} showRating={true} />
-            
-            {/* Class Required Readings Shelves */}
+            <Bookshelf title="Read Books" books={readBooks} showRating />
             {selectedClasses.map(cls => {
               const readings = classReadings[cls.classId];
               return readings ? (
@@ -375,7 +400,6 @@ function MyShelf() {
           </div>
         </div>
       </div>
-      
       <Footer />
     </div>
   );
