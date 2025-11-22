@@ -41,7 +41,7 @@ function EnvelopeNotification({ message, bookDetails, onClose, type = 'borrow' }
                   {type === 'borrow' ? 'CHECKOUT SLIP' : 'RETURN RECEIPT'}
                 </div>
                 <div className="checkout-icon">
-                  {type === 'borrow' ? '📚' : '✓'}
+                  {type === 'borrow' ? '🕮' : '✓'}
                 </div>
               </div>
 
