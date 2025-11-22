@@ -5,3 +5,9 @@ INNER JOIN FORMAT AS F ON B.ISBN = F.ISBN INNER JOIN LOCATION AS L ON F.Location
 WHERE F.Format_type = 'Hardcopy' AND F.Quantity > 8;
 
 SELECT BOOK.Title FROM BOOK, FORMAT WHERE Format_type = 'Hardcopy';
+
+USE library_management;
+SELECT * FROM AVAILABLE;
+
+SELECT FORMAT.* FROM FORMAT, BOOK WHERE BOOK.ISBN = FORMAT.ISBN AND BOOK.Title = 'Hamlet';
+

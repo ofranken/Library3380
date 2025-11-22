@@ -1,0 +1,250 @@
+/* EnvelopeNotification.css - Vintage Library Card Style */
+
+.envelope-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(31, 23, 19, 0.85);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10000;
+  animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.envelope-container {
+  position: relative;
+  animation: slideDown 0.5s ease;
+}
+
+@keyframes slideDown {
+  from {
+    transform: translateY(-50px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.envelope-close-btn {
+  position: absolute;
+  top: -15px;
+  right: -15px;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background-color: #7C2220;
+  color: #D7C1A8;
+  border: 3px solid #D7C1A8;
+  font-size: 1.8rem;
+  font-weight: bold;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10001;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+  line-height: 1;
+  padding: 0;
+}
+
+.envelope-close-btn:hover {
+  background-color: #5F2119;
+  transform: scale(1.1);
+}
+
+.envelope-close-btn:active {
+  transform: scale(0.95);
+}
+
+.envelope {
+  position: relative;
+  width: 550px;
+  height: auto;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.6);
+}
+
+.envelope-body {
+  position: relative;
+  width: 100%;
+  background: linear-gradient(135deg, #D7C1A8 0%, #E8DCC4 50%, #D7C1A8 100%);
+  border: 4px solid #6C5141;
+  border-radius: 2px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  padding: 20px 0;
+  min-height: 350px;
+}
+
+/* Vintage stamp effect */
+.envelope-body::before {
+  content: '';
+  position: absolute;
+  top: 15px;
+  right: 15px;
+  width: 60px;
+  height: 60px;
+  border: 2px dashed #7C2220;
+  background: repeating-linear-gradient(
+    45deg,
+    transparent,
+    transparent 10px,
+    rgba(124, 34, 32, 0.1) 10px,
+    rgba(124, 34, 32, 0.1) 20px
+  );
+  opacity: 0.7;
+  border-radius: 3px;
+  z-index: 1;
+}
+
+.letter-content {
+  width: 90%;
+  max-width: 500px;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  padding: 30px;
+  text-align: left;
+  color: #3d2817;
+  position: relative;
+  z-index: 2;
+}
+
+/* Vintage card header */
+.library-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 25px;
+  padding-bottom: 15px;
+  border-bottom: 2px solid #6C5141;
+}
+
+.library-title {
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: #7C2220;
+  font-family: 'Georgia', serif;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  margin: 0;
+}
+
+.checkout-icon {
+  font-size: 2rem;
+  opacity: 0.8;
+}
+
+/* Status message */
+.notification-message {
+  font-size: 1.1rem;
+  color: #5F2119;
+  margin: 0 0 20px 0;
+  font-weight: 600;
+  font-family: 'Georgia', serif;
+  font-style: italic;
+}
+
+/* Book card details - mimicking library card layout */
+.book-details {
+  width: 100%;
+  background: transparent;
+  border: 1px solid #A28C75;
+  border-radius: 0;
+  padding: 18px;
+  margin: 10px 0 20px 0;
+}
+
+.detail-line {
+  font-size: 0.95rem;
+  margin: 12px 0;
+  text-align: left;
+  color: #3d2817;
+  line-height: 1.5;
+  font-family: 'Courier New', monospace;
+  display: grid;
+  grid-template-columns: 100px 1fr;
+  gap: 15px;
+  align-items: flex-start;
+}
+
+.detail-label {
+  font-weight: 700;
+  color: #6C5141;
+  text-transform: uppercase;
+  font-size: 0.85rem;
+  letter-spacing: 0.5px;
+}
+
+.detail-value {
+  color: #3d2817;
+  text-align: left;
+  word-break: break-word;
+}
+
+/* Vintage card footer line */
+.library-card-footer {
+  position: relative;
+  height: 1px;
+  background: repeating-linear-gradient(
+    to right,
+    #6C5141 0,
+    #6C5141 10px,
+    transparent 10px,
+    transparent 20px
+  );
+  z-index: 2;
+}
+
+/* Responsive */
+@media (max-width: 700px) {
+  .envelope {
+    width: 90vw;
+    max-width: 500px;
+  }
+
+  .letter-content {
+    padding: 20px;
+  }
+
+  .library-title {
+    font-size: 1.1rem;
+  }
+
+  .notification-message {
+    font-size: 0.95rem;
+  }
+
+  .detail-line {
+    grid-template-columns: 80px 1fr;
+    gap: 10px;
+    font-size: 0.9rem;
+    margin: 10px 0;
+  }
+
+  .detail-label {
+    font-size: 0.8rem;
+  }
+
+  .envelope-close-btn {
+    width: 35px;
+    height: 35px;
+    font-size: 1.5rem;
+  }
+}

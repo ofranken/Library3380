@@ -1,8 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import './BookDetail.css';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
+import EnvelopeNotification from '../components/EnvelopeNotification.jsx';
 import authService from '../services/authService';
 
 const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
@@ -16,27 +17,52 @@ function BookDetail() {
   const [error, setError] = useState(null);
   
   const [selectedLocation, setSelectedLocation] = useState('');
-  const [selectedFormat, setSelectedFormat] = useState('hardcopy');
+  const [selectedFormat, setSelectedFormat] = useState('Hardcopy');
   
   // TBR and Review state
   const [inWishlist, setInWishlist] = useState(false);
   const [userRating, setUserRating] = useState(null);
   const [hoverRating, setHoverRating] = useState(0);
   
+  // Borrow state
+  const [isBorrowed, setIsBorrowed] = useState(false);
+  const [borrowing, setBorrowing] = useState(false);
+  
+  // Notification state
+  const [notification, setNotification] = useState(null);
+  
   const isAuthenticated = authService.isAuthenticated();
+
+  // Calculate locations from book availability
+  const locations = useMemo(() => {
+    if (!book) return [];
+    return [...new Set(book.availability.map(a => ({
+      id: a.Location_ID,
+      name: a.Name
+    }))).values()].filter((loc, index, self) => 
+      index === self.findIndex(l => l.id === loc.id)
+    );
+  }, [book]);
 
   // Fetch book details
   useEffect(() => {
     fetchBookDetails();
   }, [isbn]);
 
-  // Check TBR status and user review
+  // Check TBR status, user review, and borrow status
   useEffect(() => {
     if (isAuthenticated && book) {
       checkWishlistStatus();
       fetchUserReview();
     }
   }, [isAuthenticated, book]);
+
+  // Check borrow status when location or format changes
+  useEffect(() => {
+    if (isAuthenticated && book && selectedLocation && selectedFormat) {
+      checkBorrowStatus();
+    }
+  }, [isAuthenticated, book, selectedLocation, selectedFormat]);
 
   const fetchBookDetails = async () => {
     setLoading(true);
@@ -96,6 +122,122 @@ function BookDetail() {
     }
   };
 
+  const checkBorrowStatus = async () => {
+    const token = authService.getToken();
+    try {
+      const response = await fetch(
+        `${API_BASE_URL}/borrow/check/${isbn}/${selectedLocation}/${selectedFormat}`,
+        {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        }
+      );
+      const data = await response.json();
+      if (data.success) {
+        setIsBorrowed(data.isBorrowed);
+      }
+    } catch (err) {
+      console.error('Error checking borrow status:', err);
+    }
+  };
+
+  const handleBorrowReturn = async () => {
+    if (!isAuthenticated) {
+      navigate('/login');
+      return;
+    }
+
+    if (getAvailability() === 0 && !isBorrowed) {
+      alert('No copies available');
+      return;
+    }
+
+    setBorrowing(true);
+    const token = authService.getToken();
+
+    try {
+      if (isBorrowed) {
+        // Return book - DELETE with parameters in URL
+        const response = await fetch(
+          `${API_BASE_URL}/borrow/${isbn}/${selectedLocation}/${selectedFormat}`,
+          {
+            method: 'DELETE',
+            headers: {
+              'Authorization': `Bearer ${token}`,
+              'Content-Type': 'application/json'
+            }
+          }
+        );
+
+        const data = await response.json();
+        if (data.success) {
+          setIsBorrowed(false);
+          // Get the location name from the locations array
+          const selectedLocationObj = locations.find(loc => loc.id.toString() === selectedLocation);
+          const locationName = selectedLocationObj ? selectedLocationObj.name : 'Unknown Location';
+          
+          setNotification({
+            message: 'Book returned successfully!',
+            bookDetails: {
+              title: book.title,
+              authors: book.authors,
+              Format_type: selectedFormat,
+              location: locationName
+            },
+            type: 'return'
+          });
+          // Refresh book details to update availability
+          fetchBookDetails();
+        } else {
+          alert(data.message || 'Failed to return book');
+        }
+      } else {
+        // Borrow book - POST with body
+        const response = await fetch(`${API_BASE_URL}/borrow`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            isbn,
+            locationId: parseInt(selectedLocation),
+            formatType: selectedFormat
+          })
+        });
+
+        const data = await response.json();
+        if (data.success) {
+          setIsBorrowed(true);
+          // Get the location name from the locations array
+          const selectedLocationObj = locations.find(loc => loc.id.toString() === selectedLocation);
+          const locationName = selectedLocationObj ? selectedLocationObj.name : 'Unknown Location';
+          
+          setNotification({
+            message: 'Book borrowed successfully!',
+            bookDetails: {
+              title: book.title,
+              authors: book.authors,
+              Format_type: selectedFormat,
+              location: locationName
+            },
+            type: 'borrow'
+          });
+          // Refresh book details to update availability
+          fetchBookDetails();
+        } else {
+          alert(data.message || 'Failed to borrow book');
+        }
+      }
+    } catch (err) {
+      console.error('Error borrowing/returning book:', err);
+      alert('An error occurred. Please try again.');
+    } finally {
+      setBorrowing(false);
+    }
+  };
+
   const handleTBRToggle = async () => {
     if (!isAuthenticated) {
       navigate('/login');
@@ -106,7 +248,6 @@ function BookDetail() {
     
     try {
       if (inWishlist) {
-        // Remove from wishlist
         const response = await fetch(`${API_BASE_URL}/tbr/remove/${isbn}`, {
           method: 'DELETE',
           headers: {
@@ -118,7 +259,6 @@ function BookDetail() {
           setInWishlist(false);
         }
       } else {
-        // Add to wishlist
         const response = await fetch(`${API_BASE_URL}/tbr/add`, {
           method: 'POST',
           headers: {
@@ -158,7 +298,6 @@ function BookDetail() {
       const data = await response.json();
       if (data.success) {
         setUserRating(rating);
-        // Refresh book details to get updated average rating
         fetchBookDetails();
       }
     } catch (err) {
@@ -180,7 +319,6 @@ function BookDetail() {
       const data = await response.json();
       if (data.success) {
         setUserRating(null);
-        // Refresh book details to get updated average rating
         fetchBookDetails();
       }
     } catch (err) {
@@ -193,7 +331,7 @@ function BookDetail() {
     
     const locationAvail = book.availability.find(
       a => a.Location_ID.toString() === selectedLocation && 
-           a.Format_type.toLowerCase() === selectedFormat.toLowerCase()
+           a.Format_type === selectedFormat
     );
     
     return locationAvail ? locationAvail.Quantity : 0;
@@ -222,27 +360,23 @@ function BookDetail() {
   };
 
   const renderRatingStars = () => {
-  // Render DOM in reverse order (5 down to 1) so CSS sibling selector
-  // can color the "left" stars using row-reverse.
-  return [5, 4, 3, 2, 1].map(star => (
-    <span
-      key={star}
-      data-star={star}
-      className={`rating-star ${star <= (hoverRating || userRating) ? 'filled' : ''}`}
-      onMouseEnter={() => setHoverRating(star)}
-      onMouseLeave={() => setHoverRating(0)}
-      onClick={() => handleRatingClick(star)}
-      role="button"
-      aria-label={`${star} star`}
-      tabIndex={0}
-      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') handleRatingClick(star); }}
-    >
-      ★
-    </span>
-  ));
-};
-
-
+    return [5, 4, 3, 2, 1].map(star => (
+      <span
+        key={star}
+        data-star={star}
+        className={`rating-star ${star <= (hoverRating || userRating) ? 'filled' : ''}`}
+        onMouseEnter={() => setHoverRating(star)}
+        onMouseLeave={() => setHoverRating(0)}
+        onClick={() => handleRatingClick(star)}
+        role="button"
+        aria-label={`${star} star`}
+        tabIndex={0}
+        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') handleRatingClick(star); }}
+      >
+        ★
+      </span>
+    ));
+  };
 
   if (loading) {
     return (
@@ -272,22 +406,21 @@ function BookDetail() {
     );
   }
 
-  // Get unique locations
-  const locations = [...new Set(book.availability.map(a => ({
-    id: a.Location_ID,
-    name: a.Name
-  }))).values()].filter((loc, index, self) => 
-    index === self.findIndex(l => l.id === loc.id)
-  );
-
-  const formats = [
-    { value: 'hardcopy', label: 'Hardcopy' },
-    { value: 'ebook', label: 'E-Book' }
-  ];
+  const formats = ['Hardcopy', 'E-Book'];
 
   return (
     <div>
       <Navbar />
+
+      {/* Envelope Notification */}
+      {notification && (
+        <EnvelopeNotification
+          message={notification.message}
+          bookDetails={notification.bookDetails}
+          type={notification.type}
+          onClose={() => setNotification(null)}
+        />
+      )}
 
       <div className="book-detail-page">
         <div className="book-detail-container">
@@ -332,7 +465,6 @@ function BookDetail() {
               <p>{book.description}</p>
             </div>
 
-            {/* TBR Button */}
             <button 
               className={`tbr-button ${inWishlist ? 'in-wishlist' : ''}`}
               onClick={handleTBRToggle}
@@ -364,7 +496,7 @@ function BookDetail() {
                   className="form-select"
                 >
                   {formats.map(fmt => (
-                    <option key={fmt.value} value={fmt.value}>{fmt.label}</option>
+                    <option key={fmt} value={fmt}>{fmt}</option>
                   ))}
                 </select>
               </div>
@@ -381,9 +513,14 @@ function BookDetail() {
               </div>
             </div>
 
-            <button className="checkout-button">Borrow</button>
+            <button 
+              className={`checkout-button ${isBorrowed ? 'return-button' : ''}`}
+              onClick={handleBorrowReturn}
+              disabled={borrowing || (!isBorrowed && getAvailability() === 0)}
+            >
+              {borrowing ? (isBorrowed ? 'Returning...' : 'Borrowing...') : (isBorrowed ? 'RETURN' : 'BORROW')}
+            </button>
 
-            {/* Rating Section */}
             {isAuthenticated && (
               <div className="user-rating-section">
                 <h3>Rate this book:</h3>

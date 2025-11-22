@@ -14,7 +14,7 @@ function MyShelf() {
   const [userName, setUserName] = useState('');
   const [readBooks, setReadBooks] = useState([]);
   const [tbrBooks, setTbrBooks] = useState([]);
-  const [borrowedBooks, setBorrowedBooks] = useState([]); // ✅ NEW STATE
+  const [borrowedBooks, setBorrowedBooks] = useState([]);
   const [classReadings, setClassReadings] = useState({});
   const [loading, setLoading] = useState(true);
 
@@ -120,22 +120,24 @@ function MyShelf() {
     fetchTbr();
   }, []);
 
-  // ✅ Fetch Borrowed Books
+  // Fetch Borrowed Books
   useEffect(() => {
     const fetchBorrowed = async () => {
       try {
         const token = getAuthToken();
-        const res = await fetch(`${API_BASE_URL}/user/borrows`, {
+        const res = await fetch(`${API_BASE_URL}/user/borrowed-books`, {
           headers: { 'Authorization': `Bearer ${token}` }
         });
         const data = await res.json();
         if (data.success) {
           const formatted = data.books.map(b => ({
-            id: b.ISBN,
+            id: `${b.ISBN}-${b.Checkout_date}`,
             isbn: b.ISBN,
             title: b.Title,
             author: b.Authors || 'Unknown Author',
-            coverImage: `/images/${b.Title.replace(/\s+/g, '_').replace(/:/g, '')}.jpg`
+            coverImage: `/images/${b.Title.replace(/\s+/g, '_').replace(/:/g, '')}.jpg`,
+            dueDate: b.Due_date,
+            isOverdue: new Date(b.Due_date) < new Date()
           }));
           setBorrowedBooks(formatted);
         }
@@ -285,9 +287,23 @@ function MyShelf() {
       <span key={i} className={`star ${i + 1 <= rating ? 'filled' : 'empty'}`}>★</span>
     ));
 
-  const BookCard = ({ book, showRating }) => (
+  const formatDueDate = (dateString) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', { 
+      month: 'short', 
+      day: 'numeric', 
+      year: 'numeric' 
+    });
+  };
+
+  const BookCard = ({ book, showRating, showDueDate }) => (
     <div className="dedicated-book-card" onClick={() => handleBookClick(book.isbn)} style={{ cursor: 'pointer' }}>
       <div className="book-spine"></div>
+      {showDueDate && book.dueDate && (
+        <div className={`due-date-label ${book.isOverdue ? 'overdue' : ''}`}>
+          Due: {formatDueDate(book.dueDate)}
+        </div>
+      )}
       <img
         src={book.coverImage}
         alt={book.title}
@@ -302,13 +318,13 @@ function MyShelf() {
     </div>
   );
 
-  const Bookshelf = ({ title, books, showRating }) => (
+  const Bookshelf = ({ title, books, showRating, showDueDate }) => (
     <div className="bookshelf-container">
       <h2 className="shelf-title">{title}</h2>
       <div className="bookshelf">
         <div className="shelf-top"></div>
         <div className="books-row">
-          {books.length ? books.map(b => <BookCard key={b.id} book={b} showRating={showRating} />)
+          {books.length ? books.map(b => <BookCard key={b.id} book={b} showRating={showRating} showDueDate={showDueDate} />)
             : <div className="empty-shelf-message">No books on this shelf yet</div>}
         </div>
         <div className="shelf-bottom"></div>
@@ -341,7 +357,7 @@ function MyShelf() {
             <h2 className="user-name">{userName || 'Loading...'}</h2>
           </div>
 
-          {/* ✅ My Classes at Top */}
+          {/* My Classes Section */}
           <div className="class-management-section">
             <h2 className="section-title">My Classes</h2>
             <p className="section-description">Add classes to see their required readings on your shelf</p>
@@ -382,9 +398,9 @@ function MyShelf() {
             </div>
           </div>
 
-          {/* ✅ Shelves Below */}
+          {/* Shelves Section */}
           <div className="shelves-section">
-            <Bookshelf title="Borrowed Books" books={borrowedBooks} />
+            <Bookshelf title="Borrowed Books" books={borrowedBooks} showDueDate />
             <Bookshelf title="Personal TBR" books={tbrBooks} />
             <Bookshelf title="Read Books" books={readBooks} showRating />
             {selectedClasses.map(cls => {

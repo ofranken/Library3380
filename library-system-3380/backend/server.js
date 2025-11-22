@@ -593,7 +593,7 @@ app.get('/api/classes', authenticateToken, async (req, res) => {
   }
 });
 
-// Get user’s TBR books
+// Get user's TBR books
 app.get('/api/user/tbr', authenticateToken, async (req, res) => {
   try {
     const [books] = await promisePool.query(`
@@ -611,7 +611,7 @@ app.get('/api/user/tbr', authenticateToken, async (req, res) => {
   }
 });
 
-// Get user’s reviewed books
+// Get user's reviewed books
 app.get('/api/user/reviews', authenticateToken, async (req, res) => {
   try {
     const [books] = await promisePool.query(`
@@ -649,7 +649,7 @@ app.get('/api/classes/:classId/required', authenticateToken, async (req, res) =>
   }
 });
 
-// Get user’s name
+// Get user's name
 app.get('/api/user/name', authenticateToken, async (req, res) => {
   try {
     const [result] = await promisePool.query(
@@ -807,21 +807,159 @@ app.get('/api/user/borrowed-books', authenticateToken, async (req, res) => {
         b.ISBN, 
         b.Title, 
         GROUP_CONCAT(DISTINCT ba.Author SEPARATOR ', ') AS Authors,
-        br.Borrow_date,
+        br.Checkout_date,
         br.Due_date,
-        br.Returned
+        br.Format_type,
+        br.Location_ID
       FROM BORROWS br
       JOIN BOOK b ON br.ISBN = b.ISBN
       LEFT JOIN BOOK_AUTHOR ba ON b.ISBN = ba.ISBN
       WHERE br.Student_ID = ?
-      GROUP BY b.ISBN, b.Title, br.Borrow_date, br.Due_date, br.Returned
-      ORDER BY br.Borrow_date DESC
+      GROUP BY b.ISBN, b.Title, br.Checkout_date, br.Due_date, br.Format_type, br.Location_ID
+      ORDER BY br.Checkout_date DESC
     `, [req.user.studentId]);
 
     res.json({ success: true, books });
   } catch (error) {
     console.error('Error fetching borrowed books:', error);
     res.status(500).json({ success: false, message: 'Error fetching borrowed books' });
+  }
+});
+
+// Check if a book format is borrowed by the user
+app.get('/api/borrow/check/:isbn/:locationId/:formatType', authenticateToken, async (req, res) => {
+  const { isbn, locationId, formatType } = req.params;
+  const studentId = req.user.studentId;
+
+  try {
+    const [result] = await promisePool.query(
+      'SELECT * FROM BORROWS WHERE ISBN = ? AND Location_ID = ? AND Format_type = ? AND Student_ID = ?',
+      [isbn, locationId, formatType, studentId]
+    );
+
+    res.status(200).json({
+      success: true,
+      isBorrowed: result.length > 0,
+      borrow: result.length > 0 ? result[0] : null
+    });
+
+  } catch (error) {
+    console.error('Error checking borrow status:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Error checking borrow status' 
+    });
+  }
+});
+
+// Borrow a book (add to BORROWS table)
+app.post('/api/borrow', authenticateToken, async (req, res) => {
+  const { isbn, locationId, formatType } = req.body;
+  const studentId = req.user.studentId;
+
+  if (!isbn || !locationId || !formatType) {
+    return res.status(400).json({ 
+      success: false, 
+      message: 'ISBN, Location ID, and Format Type are required' 
+    });
+  }
+
+  try {
+    // Check if already borrowed
+    const [existing] = await promisePool.query(
+      'SELECT * FROM BORROWS WHERE ISBN = ? AND Location_ID = ? AND Format_type = ? AND Student_ID = ?',
+      [isbn, locationId, formatType, studentId]
+    );
+
+    if (existing.length > 0) {
+      return res.status(409).json({ 
+        success: false, 
+        message: 'You have already borrowed this book format' 
+      });
+    }
+
+    // Check if format exists and has quantity
+    const [format] = await promisePool.query(
+      'SELECT Quantity FROM FORMAT WHERE ISBN = ? AND Location_ID = ? AND Format_type = ?',
+      [isbn, locationId, formatType]
+    );
+
+    if (format.length === 0 || format[0].Quantity <= 0) {
+      return res.status(409).json({ 
+        success: false, 
+        message: 'This book format is not available' 
+      });
+    }
+
+    // Add to BORROWS table with today's date
+    const checkoutDate = new Date().toISOString().split('T')[0]; // YYYY-MM-DD format
+    await promisePool.query(
+      'INSERT INTO BORROWS (Student_ID, Location_ID, ISBN, Format_type, Checkout_date) VALUES (?, ?, ?, ?, ?)',
+      [studentId, locationId, isbn, formatType, checkoutDate]
+    );
+
+    // Decrease quantity in FORMAT table
+    await promisePool.query(
+      'UPDATE FORMAT SET Quantity = Quantity - 1 WHERE ISBN = ? AND Location_ID = ? AND Format_type = ?',
+      [isbn, locationId, formatType]
+    );
+
+    res.status(201).json({
+      success: true,
+      message: 'Book borrowed successfully'
+    });
+
+  } catch (error) {
+    console.error('Error borrowing book:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Error borrowing book' 
+    });
+  }
+});
+
+// Return a book (remove from BORROWS table)
+app.delete('/api/borrow/:isbn/:locationId/:formatType', authenticateToken, async (req, res) => {
+  const { isbn, locationId, formatType } = req.params;
+  const studentId = req.user.studentId;
+
+  try {
+    // Check if borrow record exists
+    const [existing] = await promisePool.query(
+      'SELECT * FROM BORROWS WHERE ISBN = ? AND Location_ID = ? AND Format_type = ? AND Student_ID = ?',
+      [isbn, locationId, formatType, studentId]
+    );
+
+    if (existing.length === 0) {
+      return res.status(404).json({ 
+        success: false, 
+        message: 'Borrow record not found' 
+      });
+    }
+
+    // Delete from BORROWS table
+    await promisePool.query(
+      'DELETE FROM BORROWS WHERE ISBN = ? AND Location_ID = ? AND Format_type = ? AND Student_ID = ?',
+      [isbn, locationId, formatType, studentId]
+    );
+
+    // Increase quantity in FORMAT table
+    await promisePool.query(
+      'UPDATE FORMAT SET Quantity = Quantity + 1 WHERE ISBN = ? AND Location_ID = ? AND Format_type = ?',
+      [isbn, locationId, formatType]
+    );
+
+    res.status(200).json({
+      success: true,
+      message: 'Book returned successfully'
+    });
+
+  } catch (error) {
+    console.error('Error returning book:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Error returning book' 
+    });
   }
 });
 
