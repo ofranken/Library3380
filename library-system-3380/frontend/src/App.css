@@ -131,11 +131,13 @@ body {
 
 .btn-primary {
   background-color: var(--falu-red);
+  border: 4px solid var(--falu-red);
   color: var(--beaver);
 }
 
 .btn-primary:hover {
   background-color: var(--quincy);
+  border: 4px solid var(--quincy);
   transform: translateY(-2px);
 }
 
