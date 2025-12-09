@@ -35,7 +35,7 @@ pool.getConnection((err, connection) => {
     console.error('Error connecting to database:', err);
     return;
   }
-  console.log('✅ Connected to MySQL database');
+console.log('SUCCESS: Connected to MySQL database');
   connection.release();
 });
 
@@ -670,7 +670,7 @@ app.get('/api/user/name', authenticateToken, async (req, res) => {
 // Get user's enrolled classes from TAKES table
 app.get('/api/user/enrolled-classes', authenticateToken, async (req, res) => {
   try {
-    console.log('📚 Fetching enrolled classes for student:', req.user.studentId);
+    console.log('Fetching enrolled classes for student:', req.user.studentId);
     
     const [classes] = await promisePool.query(`
       SELECT c.Class_ID, c.Department, c.Number, c.Class_title
@@ -680,14 +680,14 @@ app.get('/api/user/enrolled-classes', authenticateToken, async (req, res) => {
       ORDER BY c.Department, c.Number
     `, [req.user.studentId]);
     
-    console.log('📚 Found enrolled classes:', classes.length);
+    console.log('Found enrolled classes:', classes.length);
     
     res.json({ 
       success: true, 
       classes: classes || [] 
     });
   } catch (error) {
-    console.error('❌ Error fetching enrolled classes:', error);
+    console.error('Error fetching enrolled classes:', error);
     res.status(500).json({ 
       success: false, 
       message: 'Error fetching enrolled classes' 
@@ -700,7 +700,7 @@ app.post('/api/user/enroll-class', authenticateToken, async (req, res) => {
   const { classId } = req.body;
   const studentId = req.user.studentId;
 
-  console.log('➕ Enrolling student', studentId, 'in class', classId);
+  console.log('Enrolling student', studentId, 'in class', classId);
 
   if (!classId) {
     return res.status(400).json({ 
@@ -717,7 +717,7 @@ app.post('/api/user/enroll-class', authenticateToken, async (req, res) => {
     );
 
     if (classExists.length === 0) {
-      console.log('❌ Class not found:', classId);
+      console.log('Class not found:', classId);
       return res.status(404).json({ 
         success: false, 
         message: 'Class not found' 
@@ -731,7 +731,7 @@ app.post('/api/user/enroll-class', authenticateToken, async (req, res) => {
     );
 
     if (existing.length > 0) {
-      console.log('⚠️ Already enrolled in class:', classId);
+      console.log('Already enrolled in class:', classId);
       return res.status(409).json({ 
         success: false, 
         message: 'Already enrolled in this class' 
@@ -744,7 +744,7 @@ app.post('/api/user/enroll-class', authenticateToken, async (req, res) => {
       [studentId, classId]
     );
 
-    console.log('✅ Successfully enrolled in class:', classId);
+    console.log('Successfully enrolled in class:', classId);
 
     res.status(201).json({
       success: true,
@@ -752,7 +752,7 @@ app.post('/api/user/enroll-class', authenticateToken, async (req, res) => {
     });
 
   } catch (error) {
-    console.error('❌ Error enrolling in class:', error);
+    console.error('Error enrolling in class:', error);
     res.status(500).json({ 
       success: false, 
       message: 'Error enrolling in class' 
@@ -765,7 +765,7 @@ app.delete('/api/user/unenroll-class/:classId', authenticateToken, async (req, r
   const { classId } = req.params;
   const studentId = req.user.studentId;
 
-  console.log('➖ Unenrolling student', studentId, 'from class', classId);
+  console.log('Unenrolling student', studentId, 'from class', classId);
 
   try {
     // Delete from TAKES table
@@ -775,14 +775,14 @@ app.delete('/api/user/unenroll-class/:classId', authenticateToken, async (req, r
     );
 
     if (result.affectedRows === 0) {
-      console.log('⚠️ Enrollment not found');
+      console.log('Enrollment not found');
       return res.status(404).json({ 
         success: false, 
         message: 'Enrollment not found' 
       });
     }
 
-    console.log('✅ Successfully unenrolled from class:', classId);
+    console.log('Successfully unenrolled from class:', classId);
 
     res.status(200).json({
       success: true,
@@ -790,7 +790,7 @@ app.delete('/api/user/unenroll-class/:classId', authenticateToken, async (req, r
     });
 
   } catch (error) {
-    console.error('❌ Error unenrolling from class:', error);
+    console.error('Error unenrolling from class:', error);
     res.status(500).json({ 
       success: false, 
       message: 'Error unenrolling from class' 
@@ -967,5 +967,5 @@ app.delete('/api/borrow/:isbn/:locationId/:formatType', authenticateToken, async
 // ==================== END OF TAKES TABLE ROUTES ====================
 // Start server
 app.listen(PORT, () => {
-  console.log(`🚀 Server running on port ${PORT}`);
+  console.log(`SUCCESS: Server running on port ${PORT}`);
 });
